@@ -26,6 +26,11 @@ from openinference.semconv.trace import (
     SpanAttributes,
 )
 
+from ._blob_upload import (
+    BlobUploader,
+    decode_base64_data_uri_to_blob,
+    load_blob_uploader,
+)
 from .logging import logger
 
 
@@ -89,6 +94,11 @@ OPENINFERENCE_HIDE_EMBEDDINGS_TEXT = "OPENINFERENCE_HIDE_EMBEDDINGS_TEXT"
 # Hides embedding text
 OPENINFERENCE_BASE64_IMAGE_MAX_LENGTH = "OPENINFERENCE_BASE64_IMAGE_MAX_LENGTH"
 # Limits characters of a base64 encoding of an image
+OPENINFERENCE_BLOB_UPLOADER = "OPENINFERENCE_BLOB_UPLOADER"
+# Names a BlobUploader registered under the
+# "openinference_blob_uploader" entry-point group; base64 images exceeding
+# base64_image_max_length are handed to it and the attribute records the
+# returned URI
 OPENINFERENCE_HIDE_PROMPTS = "OPENINFERENCE_HIDE_PROMPTS"
 # Hides LLM prompts (completions API)
 OPENINFERENCE_HIDE_CHOICES = "OPENINFERENCE_HIDE_CHOICES"
@@ -259,9 +269,22 @@ class TraceConfig:
         },
     )
     """Limits characters of a base64 encoding of an image"""
+    blob_uploader: Optional[BlobUploader] = field(
+        default=None,
+        metadata={"env_var": None, "default_value": None},
+    )
+    """Uploads base64 images exceeding base64_image_max_length
+    to external storage and records the destination URI in the span attribute
+    instead of redacting. OpenInference ships no implementation — pass any
+    object satisfying the BlobUploader protocol, or set the
+    OPENINFERENCE_BLOB_UPLOADER environment variable to the name of an
+    uploader registered under the "openinference_blob_uploader" entry-point
+    group."""
 
     def __post_init__(self) -> None:
         for f in fields(self):
+            if f.metadata.get("env_var") is None:
+                continue
             expected_type = get_args(f.type)[0]
             # Optional is Union[T,NoneType]. get_args()returns (T, NoneType).
             # We collect the first type
@@ -271,6 +294,15 @@ class TraceConfig:
                 f.metadata["env_var"],
                 f.metadata["default_value"],
             )
+        if self.blob_uploader is None:
+            self._init_blob_uploader_from_env()
+
+    def _init_blob_uploader_from_env(self) -> None:
+        name = os.getenv(OPENINFERENCE_BLOB_UPLOADER)
+        if not name:
+            return
+        if (uploader := load_blob_uploader(name)) is not None:
+            object.__setattr__(self, "blob_uploader", uploader)
 
     def mask(
         self,
@@ -343,7 +375,7 @@ class TraceConfig:
             and MessageContentAttributes.MESSAGE_CONTENT_IMAGE in key
             and key.endswith(ImageAttributes.IMAGE_URL)
         ):
-            value = REDACTED_VALUE
+            value = self._externalize_or_redact(key, value)  # type:ignore
         elif (
             (self.hide_embedding_vectors or self.hide_embeddings_vectors)
             and SpanAttributes.EMBEDDING_EMBEDDINGS in key
@@ -357,6 +389,21 @@ class TraceConfig:
         ):
             value = REDACTED_VALUE
         return value() if callable(value) else value
+
+    def _externalize_or_redact(self, key: str, value: str) -> AttributeValue:
+        """
+        Uploads an oversized base64 data URI to external storage and returns
+        the destination URI, falling back to redaction when no uploader is
+        configured or the upload cannot be accepted.
+        """
+        if self.blob_uploader is not None:
+            try:
+                if blob := decode_base64_data_uri_to_blob(value, attribute_key=key):
+                    if uri := self.blob_uploader.upload(blob):
+                        return uri
+            except Exception:
+                logger.exception(f"Failed to externalize media for attribute '{key}'.")
+        return REDACTED_VALUE
 
     def _parse_value(
         self,
