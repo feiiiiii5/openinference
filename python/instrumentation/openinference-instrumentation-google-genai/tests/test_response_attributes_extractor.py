@@ -174,7 +174,9 @@ def test_automatic_function_calling_history_is_bucketed_into_output_messages() -
         == '{"location": "San Francisco"}'
     )
     # Each model entry gets its own bucket, and tool-call numbering restarts inside it.
-    second_prefix = f"{SpanAttributes.LLM_OUTPUT_MESSAGES}.2.{MessageAttributes.MESSAGE_TOOL_CALLS}.0."
+    second_prefix = (
+        f"{SpanAttributes.LLM_OUTPUT_MESSAGES}.2.{MessageAttributes.MESSAGE_TOOL_CALLS}.0."
+    )
     assert (
         attributes[f"{second_prefix}{ToolCallAttributes.TOOL_CALL_FUNCTION_NAME}"] == "get_weather"
     )
@@ -183,4 +185,118 @@ def test_automatic_function_calling_history_is_bucketed_into_output_messages() -
         == '{"location": "New York"}'
     )
     # An un-prefixed bucket is invisible to every consumer that groups by message index.
+    assert not [key for key in attributes if key.startswith("message.")]
+
+
+def test_afc_history_entry_that_is_the_final_candidate_is_not_published_twice() -> None:
+    """models.py:6356,6367 appends the same Content object the candidate already holds."""
+    call_content = types.Content(
+        role="model",
+        parts=[
+            types.Part(
+                function_call=types.FunctionCall(name="get_weather", args={"location": "SF"})
+            )
+        ],
+    )
+    response = types.GenerateContentResponse(
+        candidates=[types.Candidate(index=0, content=call_content)],
+        automatic_function_calling_history=[
+            types.Content(role="user", parts=[types.Part.from_text(text="weather?")]),
+            call_content,
+        ],
+    )
+
+    attributes = dict(_ResponseAttributesExtractor().get_attributes(response, {}))
+    tool_call_keys = [key for key in attributes if "tool_calls" in key]
+    duplicate_bucket = f"{SpanAttributes.LLM_OUTPUT_MESSAGES}.1."
+    assert [key for key in tool_call_keys if key.startswith(duplicate_bucket)] == []
+    assert (
+        attributes[
+            f"{SpanAttributes.LLM_OUTPUT_MESSAGES}.0.{MessageAttributes.MESSAGE_TOOL_CALLS}.0."
+            f"{ToolCallAttributes.TOOL_CALL_FUNCTION_NAME}"
+        ]
+        == "get_weather"
+    )
+
+
+def test_afc_history_seeded_with_the_request_does_not_leak_earlier_turns() -> None:
+    """models.py:6363 seeds the history with the request contents, which are inputs."""
+    earlier_call = types.Content(
+        role="model",
+        parts=[
+            types.Part(
+                function_call=types.FunctionCall(name="get_weather", args={"location": "SF"})
+            )
+        ],
+    )
+    request_contents = [
+        types.Content(role="user", parts=[types.Part.from_text(text="weather?")]),
+        earlier_call,
+        types.Content(
+            role="user",
+            parts=[
+                types.Part(
+                    function_response=types.FunctionResponse(
+                        name="get_weather", response={"temperature": 65}
+                    )
+                )
+            ],
+        ),
+    ]
+    response = types.GenerateContentResponse(
+        candidates=[
+            types.Candidate(
+                index=0,
+                content=types.Content(
+                    role="model", parts=[types.Part.from_text(text="72 in New York")]
+                ),
+            )
+        ],
+        automatic_function_calling_history=[
+            *request_contents,
+            types.Content(
+                role="model",
+                parts=[
+                    types.Part(
+                        function_call=types.FunctionCall(
+                            name="get_weather", args={"location": "NY"}
+                        )
+                    )
+                ],
+            ),
+        ],
+    )
+
+    attributes = dict(
+        _ResponseAttributesExtractor().get_attributes(response, {"contents": request_contents})
+    )
+    first = f"{SpanAttributes.LLM_OUTPUT_MESSAGES}.1.{MessageAttributes.MESSAGE_TOOL_CALLS}.0."
+    assert (
+        attributes[f"{first}{ToolCallAttributes.TOOL_CALL_FUNCTION_ARGUMENTS_JSON}"]
+        == '{"location": "NY"}'
+    )
+    assert not any(
+        "San" in str(value) and key.startswith("llm.output_messages")
+        for key, value in attributes.items()
+    )
+
+
+def test_afc_history_entry_without_parts_does_not_raise() -> None:
+    """A model entry with ``parts=None`` must not abort the whole attribute set."""
+    response = types.GenerateContentResponse(
+        candidates=[
+            types.Candidate(
+                index=0,
+                content=types.Content(
+                    role="model", parts=[types.Part.from_text(text="It is 65 degrees.")]
+                ),
+            )
+        ],
+        automatic_function_calling_history=[types.Content(role="model", parts=None)],
+    )
+
+    attributes = dict(_ResponseAttributesExtractor().get_attributes(response, {}))
+    assert attributes[
+        f"{SpanAttributes.LLM_OUTPUT_MESSAGES}.0.{MessageAttributes.MESSAGE_ROLE}"
+    ] == ("model")
     assert not [key for key in attributes if key.startswith("message.")]

@@ -1,6 +1,6 @@
 import base64
 import logging
-from typing import Any, Iterable, Iterator, Mapping, Optional
+from typing import Any, Iterable, Iterator, List, Mapping, Optional
 
 from google.genai import types
 from opentelemetry.util.types import AttributeValue
@@ -25,6 +25,25 @@ __all__ = ("_ResponseAttributesExtractor",)
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
+
+
+def _request_content_count(request_parameters: Mapping[str, Any]) -> int:
+    """How many leading ``automatic_function_calling_history`` entries came from the request.
+
+    The SDK seeds the history with the converted request contents before appending this
+    call's own function-call/response turns, so those entries belong to
+    ``llm.input_messages`` rather than to this span's output. ``_transformers.t_contents``
+    returns a new list and maps one request item to one converted content, so counting the
+    caller's items gives the seeded length.
+    """
+    contents = (
+        request_parameters.get("contents") if isinstance(request_parameters, Mapping) else None
+    )
+    if contents is None:
+        return 0
+    if isinstance(contents, (list, tuple)):
+        return len(contents)
+    return 1
 
 
 class _ResponseAttributesExtractor:
@@ -52,6 +71,7 @@ class _ResponseAttributesExtractor:
         if usage_metadata := getattr(response, "usage_metadata", None):
             yield from self._get_attributes_from_generate_content_usage(usage_metadata)
         last_output_message_index = -1
+        published_contents: List[object] = []
         if (candidates := getattr(response, "candidates", None)) and isinstance(
             candidates, Iterable
         ):
@@ -67,6 +87,7 @@ class _ResponseAttributesExtractor:
                 )
                 last_output_message_index = max(last_output_message_index, index)
                 if content := getattr(candidate, "content", None):
+                    published_contents.append(content)
                     for key, value in self._get_attributes_from_generate_content_content(content):
                         yield f"{SpanAttributes.LLM_OUTPUT_MESSAGES}.{index}.{key}", value
 
@@ -81,6 +102,8 @@ class _ResponseAttributesExtractor:
             yield from self._get_attributes_from_automatic_function_calling_history(
                 automatic_history,
                 first_message_index=last_output_message_index + 1,
+                request_content_count=_request_content_count(request_parameters),
+                published_contents=published_contents,
             )
 
     def _get_attributes_from_generate_content_content(
@@ -197,6 +220,8 @@ class _ResponseAttributesExtractor:
         history: Iterable[object],
         *,
         first_message_index: int,
+        request_content_count: int,
+        published_contents: List[object],
     ) -> Iterator[tuple[str, AttributeValue]]:
         """Extract function call information from automatic_function_calling_history.
 
@@ -205,12 +230,21 @@ class _ResponseAttributesExtractor:
         function call becomes its own ``llm.output_messages.<index>`` bucket, continuing
         after the candidate messages, because ``_get_attributes_from_function_call``
         yields message-relative keys.
+
+        Two kinds of entry are not this call's output and stay out of the buckets: the
+        leading ``request_content_count`` entries, which the SDK seeds from the request
+        (they are already ``llm.input_messages``), and any entry that is the same object
+        as a candidate content already published above.
         """
         message_index = first_message_index
 
-        for content_entry in history:
+        for position, content_entry in enumerate(history):
+            if position < request_content_count:
+                continue
             # Each entry is a Content object with parts
             if not hasattr(content_entry, "parts") or not hasattr(content_entry, "role"):
+                continue
+            if any(content_entry is published for published in published_contents):
                 continue
 
             # Look for model responses that contain function calls
