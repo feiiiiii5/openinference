@@ -2,7 +2,7 @@ import base64
 import logging
 from typing import Any, Iterable, Iterator, List, Mapping, Optional
 
-from google.genai import types
+from google.genai import _transformers, types
 from opentelemetry.util.types import AttributeValue
 
 from openinference.instrumentation import safe_json_dumps
@@ -30,20 +30,22 @@ logger.addHandler(logging.NullHandler())
 def _request_content_count(request_parameters: Mapping[str, Any]) -> int:
     """How many leading ``automatic_function_calling_history`` entries came from the request.
 
-    The SDK seeds the history with the converted request contents before appending this
-    call's own function-call/response turns, so those entries belong to
-    ``llm.input_messages`` rather than to this span's output. ``_transformers.t_contents``
-    returns a new list and maps one request item to one converted content, so counting the
-    caller's items gives the seeded length.
+    The SDK seeds the history with ``t_contents(contents)`` before appending this call's own
+    function-call/response turns, so those entries belong to ``llm.input_messages`` rather than to
+    this span's output. ``t_contents`` merges consecutive part-like items into a single content, so
+    the caller's own list length cannot be trusted; ask the same transformer, and on any doubt
+    return 0, which can leak a stale entry but can never delete a call this invocation made.
     """
     contents = (
         request_parameters.get("contents") if isinstance(request_parameters, Mapping) else None
     )
     if contents is None:
         return 0
-    if isinstance(contents, (list, tuple)):
-        return len(contents)
-    return 1
+    try:
+        return len(_transformers.t_contents(contents))
+    except Exception:
+        logger.warning("Failed to size the request contents seeded into the AFC history")
+        return 0
 
 
 class _ResponseAttributesExtractor:
@@ -251,7 +253,7 @@ class _ResponseAttributesExtractor:
             if getattr(content_entry, "role") == "model":
                 function_calls = [
                     (part, part_function_call)
-                    for part in getattr(content_entry, "parts", []) or []
+                    for part in getattr(content_entry, "parts", [])
                     if (part_function_call := getattr(part, "function_call", None)) is not None
                 ]
                 if not function_calls:

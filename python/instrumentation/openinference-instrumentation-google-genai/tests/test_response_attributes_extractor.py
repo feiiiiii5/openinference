@@ -281,22 +281,47 @@ def test_afc_history_seeded_with_the_request_does_not_leak_earlier_turns() -> No
     )
 
 
-def test_afc_history_entry_without_parts_does_not_raise() -> None:
-    """A model entry with ``parts=None`` must not abort the whole attribute set."""
+def test_afc_history_after_merged_request_parts_keeps_this_call_turn() -> None:
+    """The seeded prefix is shorter than the caller's list when t_contents merges parts.
+
+    ``_transformers.t_contents`` folds consecutive part-like items into one Content, so counting
+    the caller's list would skip one entry too many and delete the call this invocation made.
+    """
+    request_parts = [
+        types.Part.from_text(text="What's the weather like"),
+        types.Part.from_text(text="in San Francisco?"),
+    ]
     response = types.GenerateContentResponse(
         candidates=[
             types.Candidate(
                 index=0,
                 content=types.Content(
-                    role="model", parts=[types.Part.from_text(text="It is 65 degrees.")]
+                    role="model", parts=[types.Part.from_text(text="65 degrees and foggy.")]
                 ),
             )
         ],
-        automatic_function_calling_history=[types.Content(role="model", parts=None)],
+        automatic_function_calling_history=[
+            types.Content(role="user", parts=request_parts),
+            types.Content(
+                role="model",
+                parts=[
+                    types.Part(
+                        function_call=types.FunctionCall(
+                            name="get_weather", args={"location": "San Francisco"}
+                        )
+                    )
+                ],
+            ),
+        ],
     )
 
-    attributes = dict(_ResponseAttributesExtractor().get_attributes(response, {}))
-    assert attributes[
-        f"{SpanAttributes.LLM_OUTPUT_MESSAGES}.0.{MessageAttributes.MESSAGE_ROLE}"
-    ] == ("model")
-    assert not [key for key in attributes if key.startswith("message.")]
+    attributes = dict(
+        _ResponseAttributesExtractor().get_attributes(response, {"contents": request_parts})
+    )
+    tool_call_prefix = (
+        f"{SpanAttributes.LLM_OUTPUT_MESSAGES}.1.{MessageAttributes.MESSAGE_TOOL_CALLS}.0."
+    )
+    assert (
+        attributes[f"{tool_call_prefix}{ToolCallAttributes.TOOL_CALL_FUNCTION_NAME}"]
+        == "get_weather"
+    )
