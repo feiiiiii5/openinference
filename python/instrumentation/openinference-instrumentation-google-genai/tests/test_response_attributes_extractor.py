@@ -6,6 +6,11 @@ from google.genai import types
 from openinference.instrumentation.google_genai._response_attributes_extractor import (
     _ResponseAttributesExtractor,
 )
+from openinference.semconv.trace import (
+    MessageAttributes,
+    SpanAttributes,
+    ToolCallAttributes,
+)
 
 
 @pytest.mark.parametrize(
@@ -92,3 +97,90 @@ def test_get_attributes_from_generate_content_usage_cached(
         _ResponseAttributesExtractor()._get_attributes_from_generate_content_usage(usage_metadata)
     )
     assert actual == expected
+
+
+def test_automatic_function_calling_history_is_bucketed_into_output_messages() -> None:
+    """AFC tool calls must sit inside an ``llm.output_messages.<i>`` bucket.
+
+    The payload mirrors the recorded API response in
+    ``tests/cassettes/test_instrumentation/test_generate_content_with_automatic_tool_calling.yaml``:
+    Gemini sends ``functionCall`` with ``name``/``args`` only, no ``id``.
+    """
+    response = types.GenerateContentResponse(
+        candidates=[
+            types.Candidate(
+                index=0,
+                content=types.Content(
+                    role="model",
+                    parts=[types.Part.from_text(text="It is 65 degrees and foggy.")],
+                ),
+                finish_reason=types.FinishReason.STOP,
+            )
+        ],
+        automatic_function_calling_history=[
+            types.Content(
+                role="model",
+                parts=[
+                    types.Part(
+                        function_call=types.FunctionCall(
+                            name="get_weather", args={"location": "San Francisco"}
+                        )
+                    )
+                ],
+            ),
+            types.Content(
+                role="user",
+                parts=[
+                    types.Part(
+                        function_response=types.FunctionResponse(
+                            name="get_weather", response={"temperature": 65}
+                        )
+                    )
+                ],
+            ),
+            types.Content(
+                role="model",
+                parts=[
+                    types.Part(
+                        function_call=types.FunctionCall(
+                            name="get_weather", args={"location": "New York"}
+                        )
+                    )
+                ],
+            ),
+            types.Content(
+                role="user",
+                parts=[
+                    types.Part(
+                        function_response=types.FunctionResponse(
+                            name="get_weather", response={"temperature": 72}
+                        )
+                    )
+                ],
+            ),
+        ],
+    )
+
+    attributes = dict(_ResponseAttributesExtractor().get_attributes(response, {}))
+    message_prefix = f"{SpanAttributes.LLM_OUTPUT_MESSAGES}.1."
+    assert attributes[f"{message_prefix}{MessageAttributes.MESSAGE_ROLE}"] == "model"
+    tool_call_prefix = f"{message_prefix}{MessageAttributes.MESSAGE_TOOL_CALLS}.0."
+    assert (
+        attributes[f"{tool_call_prefix}{ToolCallAttributes.TOOL_CALL_FUNCTION_NAME}"]
+        == "get_weather"
+    )
+    assert (
+        attributes[f"{tool_call_prefix}{ToolCallAttributes.TOOL_CALL_FUNCTION_ARGUMENTS_JSON}"]
+        == '{"location": "San Francisco"}'
+    )
+    # Each model entry gets its own bucket, and tool-call numbering restarts inside it.
+    second_prefix = f"{SpanAttributes.LLM_OUTPUT_MESSAGES}.2.{MessageAttributes.MESSAGE_TOOL_CALLS}.0."
+    assert (
+        attributes[f"{second_prefix}{ToolCallAttributes.TOOL_CALL_FUNCTION_NAME}"] == "get_weather"
+    )
+    assert (
+        attributes[f"{second_prefix}{ToolCallAttributes.TOOL_CALL_FUNCTION_ARGUMENTS_JSON}"]
+        == '{"location": "New York"}'
+    )
+    # An un-prefixed bucket is invisible to every consumer that groups by message index.
+    assert not [key for key in attributes if key.startswith("message.")]

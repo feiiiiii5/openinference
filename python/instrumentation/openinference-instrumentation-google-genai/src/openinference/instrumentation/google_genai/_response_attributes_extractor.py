@@ -51,6 +51,7 @@ class _ResponseAttributesExtractor:
             yield SpanAttributes.LLM_MODEL_NAME, model_version
         if usage_metadata := getattr(response, "usage_metadata", None):
             yield from self._get_attributes_from_generate_content_usage(usage_metadata)
+        last_output_message_index = -1
         if (candidates := getattr(response, "candidates", None)) and isinstance(
             candidates, Iterable
         ):
@@ -64,6 +65,7 @@ class _ResponseAttributesExtractor:
                     if getattr(candidate, "index") is None
                     else getattr(candidate, "index")
                 )
+                last_output_message_index = max(last_output_message_index, index)
                 if content := getattr(candidate, "content", None):
                     for key, value in self._get_attributes_from_generate_content_content(content):
                         yield f"{SpanAttributes.LLM_OUTPUT_MESSAGES}.{index}.{key}", value
@@ -77,7 +79,8 @@ class _ResponseAttributesExtractor:
         # For automatic function calling, the function call details are stored separately
         if automatic_history := getattr(response, "automatic_function_calling_history", None):
             yield from self._get_attributes_from_automatic_function_calling_history(
-                automatic_history
+                automatic_history,
+                first_message_index=last_output_message_index + 1,
             )
 
     def _get_attributes_from_generate_content_content(
@@ -192,13 +195,18 @@ class _ResponseAttributesExtractor:
     def _get_attributes_from_automatic_function_calling_history(
         self,
         history: Iterable[object],
+        *,
+        first_message_index: int,
     ) -> Iterator[tuple[str, AttributeValue]]:
         """Extract function call information from automatic_function_calling_history.
 
         This history contains the sequence of model->function call->function response
-        that happened during automatic function calling.
+        that happened during automatic function calling. Each model entry that issued a
+        function call becomes its own ``llm.output_messages.<index>`` bucket, continuing
+        after the candidate messages, because ``_get_attributes_from_function_call``
+        yields message-relative keys.
         """
-        tool_call_index = 0
+        message_index = first_message_index
 
         for content_entry in history:
             # Each entry is a Content object with parts
@@ -207,13 +215,19 @@ class _ResponseAttributesExtractor:
 
             # Look for model responses that contain function calls
             if getattr(content_entry, "role") == "model":
-                parts = getattr(content_entry, "parts", [])
-                for part in parts:
-                    if function_call := getattr(part, "function_call", None):
-                        thought_signature: Optional[bytes] = getattr(
-                            part, "thought_signature", None
-                        )
-                        yield from self._get_attributes_from_function_call(
-                            function_call, tool_call_index, thought_signature
-                        )
-                        tool_call_index += 1
+                function_calls = [
+                    (part, part_function_call)
+                    for part in getattr(content_entry, "parts", []) or []
+                    if (part_function_call := getattr(part, "function_call", None)) is not None
+                ]
+                if not function_calls:
+                    continue
+                message_prefix = f"{SpanAttributes.LLM_OUTPUT_MESSAGES}.{message_index}."
+                yield f"{message_prefix}{MessageAttributes.MESSAGE_ROLE}", "model"
+                for tool_call_index, (part, function_call) in enumerate(function_calls):
+                    thought_signature: Optional[bytes] = getattr(part, "thought_signature", None)
+                    for key, value in self._get_attributes_from_function_call(
+                        function_call, tool_call_index, thought_signature
+                    ):
+                        yield f"{message_prefix}{key}", value
+                message_index += 1
