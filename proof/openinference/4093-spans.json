@@ -1,0 +1,112 @@
+{
+  "sdk": "groq 0.9.0",
+  "python": "3.12.8",
+  "transport": "httpx mock transport; no provider API calls",
+  "redactions": [
+    "exception.stacktrace omitted because it contains local filesystem paths"
+  ],
+  "source_sha256": "fb2a30eac50f60b0013504ebdc5547ae7230647e108b61a4239a6c635994601e",
+  "cases": {
+    "tests/test_streaming.py::test_stream_span_ends_after_consumption[x_groq]": [
+      {
+        "name": "Completions",
+        "context": {
+          "trace_id": "0xbcef39054f7d8204305ec504787bbce5",
+          "span_id": "0x7eb042b86aad20de",
+          "trace_state": "[]"
+        },
+        "kind": "SpanKind.INTERNAL",
+        "parent_id": null,
+        "start_time": "2026-10-30T07:35:26.156008Z",
+        "end_time": "2026-10-30T07:35:26.181125Z",
+        "status": {
+          "status_code": "OK"
+        },
+        "attributes": {
+          "llm.invocation_parameters": "{\"model\": \"fake_model\", \"stream\": true}",
+          "llm.input_messages.0.message.role": "user",
+          "llm.input_messages.0.message.content": "Count from one to three.",
+          "output.value": "{\"id\": \"chatcmpl-stream\", \"object\": \"chat.completion\", \"created\": 1722531851, \"model\": \"fake_model\", \"choices\": [{\"index\": 0, \"message\": {\"role\": \"assistant\", \"content\": \"1, 2\"}, \"finish_reason\": \"stop\"}], \"system_fingerprint\": \"fp0\", \"usage\": {\"completion_tokens\": 379, \"prompt_tokens\": 25, \"total_tokens\": 404, \"completion_time\": 0.616, \"prompt_time\": 0.0025, \"queue_time\": null, \"total_time\": 0.619}}",
+          "output.mime_type": "application/json",
+          "llm.provider": "groq",
+          "input.value": "{\"messages\": [{\"role\": \"user\", \"content\": \"Count from one to three.\"}], \"model\": \"fake_model\", \"stream\": true}",
+          "input.mime_type": "application/json",
+          "llm.model_name": "fake_model",
+          "llm.token_count.total": 404,
+          "llm.token_count.prompt": 25,
+          "llm.token_count.completion": 379,
+          "llm.output_messages.0.message.role": "assistant",
+          "llm.output_messages.0.message.content": "1, 2",
+          "llm.finish_reason": "stop",
+          "openinference.span.kind": "LLM"
+        },
+        "events": [
+          {
+            "name": "First Token Stream Event",
+            "timestamp": "2026-10-30T07:35:26.178537Z",
+            "attributes": {}
+          }
+        ],
+        "links": [],
+        "resource": {
+          "attributes": {},
+          "schema_url": ""
+        }
+      }
+    ],
+    "tests/test_streaming.py::test_async_stream_cancelled_during_read_ends_the_span": [
+      {
+        "name": "AsyncCompletions",
+        "context": {
+          "trace_id": "0x4cb417b027f76fa034d44786f389ff10",
+          "span_id": "0xc4fd640acfbf94a0",
+          "trace_state": "[]"
+        },
+        "kind": "SpanKind.INTERNAL",
+        "parent_id": null,
+        "start_time": "2026-10-30T07:35:26.184411Z",
+        "end_time": "2026-10-30T07:35:26.187094Z",
+        "status": {
+          "status_code": "ERROR",
+          "description": "CancelledError: cancelled by caller"
+        },
+        "attributes": {
+          "llm.invocation_parameters": "{\"model\": \"fake_model\", \"stream\": true}",
+          "llm.input_messages.0.message.role": "user",
+          "llm.input_messages.0.message.content": "Count from one to three.",
+          "output.value": "{\"id\": \"chatcmpl-stream\", \"object\": \"chat.completion\", \"created\": 1722531851, \"model\": \"fake_model\", \"choices\": [{\"index\": 0, \"message\": {\"role\": \"assistant\", \"content\": \"1\"}, \"finish_reason\": null}], \"system_fingerprint\": \"fp0\"}",
+          "output.mime_type": "application/json",
+          "llm.provider": "groq",
+          "input.value": "{\"messages\": [{\"role\": \"user\", \"content\": \"Count from one to three.\"}], \"model\": \"fake_model\", \"stream\": true}",
+          "input.mime_type": "application/json",
+          "llm.model_name": "fake_model",
+          "llm.output_messages.0.message.role": "assistant",
+          "llm.output_messages.0.message.content": "1",
+          "openinference.span.kind": "LLM"
+        },
+        "events": [
+          {
+            "name": "First Token Stream Event",
+            "timestamp": "2026-10-30T07:35:26.185497Z",
+            "attributes": {}
+          },
+          {
+            "name": "exception",
+            "timestamp": "2026-10-30T07:35:26.186953Z",
+            "attributes": {
+              "exception.type": "asyncio.exceptions.CancelledError",
+              "exception.message": "cancelled by caller",
+              "exception.escaped": "False"
+            }
+          }
+        ],
+        "links": [],
+        "resource": {
+          "attributes": {},
+          "schema_url": ""
+        }
+      }
+    ]
+  },
+  "pytest_rc": 0
+}

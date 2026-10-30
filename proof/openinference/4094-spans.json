@@ -1,0 +1,323 @@
+{
+  "pr": "https://github.com/Arize-ai/openinference/pull/4094",
+  "head": "0c7f2a72a08d6947875ffbcdb0eaf7029b31756a",
+  "source": "Existing SDK tests; actual finished ReadableSpan.to_json from fixture exporter",
+  "python": "3.12.8",
+  "versions": {
+    "portkey-ai": "1.11.2",
+    "pytest": "9.0.3",
+    "pytest-asyncio": "1.3.0",
+    "pytest-vcr": "1.0.2",
+    "vcrpy": "9.2.0",
+    "respx": "0.23.1",
+    "pytest-socket": "0.7.0",
+    "opentelemetry-sdk": "1.45.2",
+    "ruff": "0.9.2",
+    "mypy": "1.11.2",
+    "openinference-instrumentation": "0.1.71",
+    "openinference-semantic-conventions": "0.1.41",
+    "openinference-instrumentation-portkey": "0.1.22"
+  },
+  "network_policy": {
+    "disable_ip_sockets": true,
+    "allow_unix_sockets_for_asyncio": true,
+    "vcr_record_mode": "none"
+  },
+  "pytest_exitstatus": 0,
+  "tests": [
+    {
+      "test": "test_chat_completion_records_tool_calls_on_output_message",
+      "nodeid": "tests/test_instrumentor.py::test_chat_completion_records_tool_calls_on_output_message",
+      "outcome": "passed",
+      "spans": [
+        {
+          "name": "Completions",
+          "context": {
+            "trace_id": "0x26e80897a8b2644ceb120cbc8d1a9a5f",
+            "span_id": "0xcce34085a01fd6b4",
+            "trace_state": "[]"
+          },
+          "kind": "SpanKind.INTERNAL",
+          "parent_id": null,
+          "start_time": "2026-10-30T07:33:20.451546Z",
+          "end_time": "2026-10-30T07:33:20.468900Z",
+          "status": {
+            "status_code": "OK"
+          },
+          "attributes": {
+            "llm.invocation_parameters": "{\"model\": \"gpt-4o-mini\", \"stream\": \"NOT_GIVEN\", \"temperature\": \"NOT_GIVEN\", \"max_tokens\": \"NOT_GIVEN\", \"top_p\": \"NOT_GIVEN\", \"audio\": \"NOT_GIVEN\", \"max_completion_tokens\": \"NOT_GIVEN\", \"metadata\": \"NOT_GIVEN\", \"modalities\": \"NOT_GIVEN\", \"prediction\": \"NOT_GIVEN\", \"reasoning_effort\": \"NOT_GIVEN\", \"store\": \"NOT_GIVEN\", \"kwargs\": {}}",
+            "llm.input_messages.0.message.role": "user",
+            "llm.input_messages.0.message.content": "What is the weather and time?",
+            "output.value": "{\"id\":\"chatcmpl-tool-calls\",\"choices\":[{\"finish_reason\":\"tool_calls\",\"index\":0,\"message\":{\"content\":null,\"role\":\"assistant\",\"tool_calls\":[{\"id\":\"call_one\",\"function\":{\"arguments\":\"{\\\"city\\\": \\\"New York\\\"}\",\"name\":\"get_weather\"},\"type\":\"function\"},{\"id\":\"call_two\",\"function\":{\"arguments\":\"{\\\"timezone\\\": \\\"EST\\\"}\",\"name\":\"get_time\"},\"type\":\"function\"}]}}],\"created\":1750000000,\"model\":\"gpt-4o-mini\",\"object\":\"chat.completion\",\"usage\":{\"prompt_tokens\":10,\"completion_tokens\":5,\"total_tokens\":15}}",
+            "output.mime_type": "application/json",
+            "input.value": "{\"model\": \"gpt-4o-mini\", \"messages\": [{\"role\": \"user\", \"content\": \"What is the weather and time?\"}], \"stream\": \"NOT_GIVEN\", \"temperature\": \"NOT_GIVEN\", \"max_tokens\": \"NOT_GIVEN\", \"top_p\": \"NOT_GIVEN\", \"audio\": \"NOT_GIVEN\", \"max_completion_tokens\": \"NOT_GIVEN\", \"metadata\": \"NOT_GIVEN\", \"modalities\": \"NOT_GIVEN\", \"prediction\": \"NOT_GIVEN\", \"reasoning_effort\": \"NOT_GIVEN\", \"store\": \"NOT_GIVEN\", \"kwargs\": {}}",
+            "input.mime_type": "application/json",
+            "llm.model_name": "gpt-4o-mini",
+            "llm.token_count.total": 15,
+            "llm.token_count.prompt": 10,
+            "llm.token_count.completion": 5,
+            "llm.output_messages.0.message.role": "assistant",
+            "llm.output_messages.0.message.tool_calls.0.tool_call.id": "call_one",
+            "llm.output_messages.0.message.tool_calls.0.tool_call.function.name": "get_weather",
+            "llm.output_messages.0.message.tool_calls.0.tool_call.function.arguments": "{\"city\": \"New York\"}",
+            "llm.output_messages.0.message.tool_calls.1.tool_call.id": "call_two",
+            "llm.output_messages.0.message.tool_calls.1.tool_call.function.name": "get_time",
+            "llm.output_messages.0.message.tool_calls.1.tool_call.function.arguments": "{\"timezone\": \"EST\"}",
+            "llm.finish_reason": "tool_calls",
+            "openinference.span.kind": "LLM"
+          },
+          "events": [],
+          "links": [],
+          "resource": {
+            "attributes": {},
+            "schema_url": ""
+          }
+        }
+      ]
+    },
+    {
+      "test": "test_async_chat_completion_records_tool_calls_on_output_message",
+      "nodeid": "tests/test_instrumentor.py::test_async_chat_completion_records_tool_calls_on_output_message",
+      "outcome": "passed",
+      "spans": [
+        {
+          "name": "AsyncCompletions",
+          "context": {
+            "trace_id": "0xa3c8d6cca148593a229fea8fdb950f53",
+            "span_id": "0x92ab5c8f1d20de39",
+            "trace_state": "[]"
+          },
+          "kind": "SpanKind.INTERNAL",
+          "parent_id": null,
+          "start_time": "2026-10-30T07:33:20.537428Z",
+          "end_time": "2026-10-30T07:33:20.539913Z",
+          "status": {
+            "status_code": "OK"
+          },
+          "attributes": {
+            "llm.invocation_parameters": "{\"model\": \"gpt-4o-mini\", \"stream\": \"NOT_GIVEN\", \"temperature\": \"NOT_GIVEN\", \"max_tokens\": \"NOT_GIVEN\", \"top_p\": \"NOT_GIVEN\", \"audio\": \"NOT_GIVEN\", \"max_completion_tokens\": \"NOT_GIVEN\", \"metadata\": \"NOT_GIVEN\", \"modalities\": \"NOT_GIVEN\", \"prediction\": \"NOT_GIVEN\", \"reasoning_effort\": \"NOT_GIVEN\", \"store\": \"NOT_GIVEN\", \"kwargs\": {}}",
+            "llm.input_messages.0.message.role": "user",
+            "llm.input_messages.0.message.content": "What is the weather and time?",
+            "output.value": "{\"id\":\"chatcmpl-tool-calls\",\"choices\":[{\"finish_reason\":\"tool_calls\",\"index\":0,\"message\":{\"content\":null,\"role\":\"assistant\",\"tool_calls\":[{\"id\":\"call_one\",\"function\":{\"arguments\":\"{\\\"city\\\": \\\"New York\\\"}\",\"name\":\"get_weather\"},\"type\":\"function\"},{\"id\":\"call_two\",\"function\":{\"arguments\":\"{\\\"timezone\\\": \\\"EST\\\"}\",\"name\":\"get_time\"},\"type\":\"function\"}]}}],\"created\":1750000000,\"model\":\"gpt-4o-mini\",\"object\":\"chat.completion\",\"usage\":{\"prompt_tokens\":10,\"completion_tokens\":5,\"total_tokens\":15}}",
+            "output.mime_type": "application/json",
+            "input.value": "{\"model\": \"gpt-4o-mini\", \"messages\": [{\"role\": \"user\", \"content\": \"What is the weather and time?\"}], \"stream\": \"NOT_GIVEN\", \"temperature\": \"NOT_GIVEN\", \"max_tokens\": \"NOT_GIVEN\", \"top_p\": \"NOT_GIVEN\", \"audio\": \"NOT_GIVEN\", \"max_completion_tokens\": \"NOT_GIVEN\", \"metadata\": \"NOT_GIVEN\", \"modalities\": \"NOT_GIVEN\", \"prediction\": \"NOT_GIVEN\", \"reasoning_effort\": \"NOT_GIVEN\", \"store\": \"NOT_GIVEN\", \"kwargs\": {}}",
+            "input.mime_type": "application/json",
+            "llm.model_name": "gpt-4o-mini",
+            "llm.token_count.total": 15,
+            "llm.token_count.prompt": 10,
+            "llm.token_count.completion": 5,
+            "llm.output_messages.0.message.role": "assistant",
+            "llm.output_messages.0.message.tool_calls.0.tool_call.id": "call_one",
+            "llm.output_messages.0.message.tool_calls.0.tool_call.function.name": "get_weather",
+            "llm.output_messages.0.message.tool_calls.0.tool_call.function.arguments": "{\"city\": \"New York\"}",
+            "llm.output_messages.0.message.tool_calls.1.tool_call.id": "call_two",
+            "llm.output_messages.0.message.tool_calls.1.tool_call.function.name": "get_time",
+            "llm.output_messages.0.message.tool_calls.1.tool_call.function.arguments": "{\"timezone\": \"EST\"}",
+            "llm.finish_reason": "tool_calls",
+            "openinference.span.kind": "LLM"
+          },
+          "events": [],
+          "links": [],
+          "resource": {
+            "attributes": {},
+            "schema_url": ""
+          }
+        }
+      ]
+    }
+  ],
+  "control_scenarios": [
+    {
+      "test": "test_tool_calls_respect_trace_controls[suppress]",
+      "mode": "suppress",
+      "outcome": "passed",
+      "spans": []
+    },
+    {
+      "test": "test_tool_calls_respect_trace_controls[context]",
+      "mode": "context",
+      "outcome": "passed",
+      "spans": [
+        {
+          "name": "Completions",
+          "context": {
+            "trace_id": "0xaa6ceacf46eae66f3540aac2dad671e9",
+            "span_id": "0x8fa8be4af59da0d0",
+            "trace_state": "[]"
+          },
+          "kind": "SpanKind.INTERNAL",
+          "parent_id": null,
+          "start_time": "2026-10-30T07:38:00.074379Z",
+          "end_time": "2026-10-30T07:38:00.076172Z",
+          "status": {
+            "status_code": "OK"
+          },
+          "attributes": {
+            "llm.invocation_parameters": "{\"model\": \"gpt-4o-mini\", \"stream\": \"NOT_GIVEN\", \"temperature\": \"NOT_GIVEN\", \"max_tokens\": \"NOT_GIVEN\", \"top_p\": \"NOT_GIVEN\", \"audio\": \"NOT_GIVEN\", \"max_completion_tokens\": \"NOT_GIVEN\", \"metadata\": \"NOT_GIVEN\", \"modalities\": \"NOT_GIVEN\", \"prediction\": \"NOT_GIVEN\", \"reasoning_effort\": \"NOT_GIVEN\", \"store\": \"NOT_GIVEN\", \"kwargs\": {}}",
+            "llm.input_messages.0.message.role": "user",
+            "llm.input_messages.0.message.content": "What is the weather and time?",
+            "output.value": "{\"id\":\"chatcmpl-tool-calls\",\"choices\":[{\"finish_reason\":\"tool_calls\",\"index\":0,\"message\":{\"content\":null,\"role\":\"assistant\",\"tool_calls\":[{\"id\":\"call_one\",\"function\":{\"arguments\":\"{\\\"city\\\": \\\"New York\\\"}\",\"name\":\"get_weather\"},\"type\":\"function\"},{\"id\":\"call_two\",\"function\":{\"arguments\":\"{\\\"timezone\\\": \\\"EST\\\"}\",\"name\":\"get_time\"},\"type\":\"function\"}]}}],\"created\":1750000000,\"model\":\"gpt-4o-mini\",\"object\":\"chat.completion\",\"usage\":{\"prompt_tokens\":10,\"completion_tokens\":5,\"total_tokens\":15}}",
+            "output.mime_type": "application/json",
+            "session.id": "tool-calls-session",
+            "user.id": "synthetic-user",
+            "metadata": "{\"source\": \"tool-calls-test\"}",
+            "tag.tags": [
+              "synthetic",
+              "tool-calls"
+            ],
+            "input.value": "{\"model\": \"gpt-4o-mini\", \"messages\": [{\"role\": \"user\", \"content\": \"What is the weather and time?\"}], \"stream\": \"NOT_GIVEN\", \"temperature\": \"NOT_GIVEN\", \"max_tokens\": \"NOT_GIVEN\", \"top_p\": \"NOT_GIVEN\", \"audio\": \"NOT_GIVEN\", \"max_completion_tokens\": \"NOT_GIVEN\", \"metadata\": \"NOT_GIVEN\", \"modalities\": \"NOT_GIVEN\", \"prediction\": \"NOT_GIVEN\", \"reasoning_effort\": \"NOT_GIVEN\", \"store\": \"NOT_GIVEN\", \"kwargs\": {}}",
+            "input.mime_type": "application/json",
+            "llm.model_name": "gpt-4o-mini",
+            "llm.token_count.total": 15,
+            "llm.token_count.prompt": 10,
+            "llm.token_count.completion": 5,
+            "llm.output_messages.0.message.role": "assistant",
+            "llm.output_messages.0.message.tool_calls.0.tool_call.id": "call_one",
+            "llm.output_messages.0.message.tool_calls.0.tool_call.function.name": "get_weather",
+            "llm.output_messages.0.message.tool_calls.0.tool_call.function.arguments": "{\"city\": \"New York\"}",
+            "llm.output_messages.0.message.tool_calls.1.tool_call.id": "call_two",
+            "llm.output_messages.0.message.tool_calls.1.tool_call.function.name": "get_time",
+            "llm.output_messages.0.message.tool_calls.1.tool_call.function.arguments": "{\"timezone\": \"EST\"}",
+            "llm.finish_reason": "tool_calls",
+            "openinference.span.kind": "LLM"
+          },
+          "events": [],
+          "links": [],
+          "resource": {
+            "attributes": {},
+            "schema_url": ""
+          }
+        }
+      ]
+    },
+    {
+      "test": "test_tool_calls_respect_trace_controls[masking]",
+      "mode": "masking",
+      "outcome": "passed",
+      "spans": [
+        {
+          "name": "Completions",
+          "context": {
+            "trace_id": "0x22729e2ae96ec0667d3d36eff1531b83",
+            "span_id": "0xbede82414ba1a3e7",
+            "trace_state": "[]"
+          },
+          "kind": "SpanKind.INTERNAL",
+          "parent_id": null,
+          "start_time": "2026-10-30T07:38:00.143325Z",
+          "end_time": "2026-10-30T07:38:00.145110Z",
+          "status": {
+            "status_code": "OK"
+          },
+          "attributes": {
+            "llm.invocation_parameters": "{\"model\": \"gpt-4o-mini\", \"stream\": \"NOT_GIVEN\", \"temperature\": \"NOT_GIVEN\", \"max_tokens\": \"NOT_GIVEN\", \"top_p\": \"NOT_GIVEN\", \"audio\": \"NOT_GIVEN\", \"max_completion_tokens\": \"NOT_GIVEN\", \"metadata\": \"NOT_GIVEN\", \"modalities\": \"NOT_GIVEN\", \"prediction\": \"NOT_GIVEN\", \"reasoning_effort\": \"NOT_GIVEN\", \"store\": \"NOT_GIVEN\", \"kwargs\": {}}",
+            "llm.input_messages.0.message.role": "user",
+            "llm.input_messages.0.message.content": "What is the weather and time?",
+            "output.value": "__REDACTED__",
+            "input.value": "{\"model\": \"gpt-4o-mini\", \"messages\": [{\"role\": \"user\", \"content\": \"What is the weather and time?\"}], \"stream\": \"NOT_GIVEN\", \"temperature\": \"NOT_GIVEN\", \"max_tokens\": \"NOT_GIVEN\", \"top_p\": \"NOT_GIVEN\", \"audio\": \"NOT_GIVEN\", \"max_completion_tokens\": \"NOT_GIVEN\", \"metadata\": \"NOT_GIVEN\", \"modalities\": \"NOT_GIVEN\", \"prediction\": \"NOT_GIVEN\", \"reasoning_effort\": \"NOT_GIVEN\", \"store\": \"NOT_GIVEN\", \"kwargs\": {}}",
+            "input.mime_type": "application/json",
+            "llm.model_name": "gpt-4o-mini",
+            "llm.token_count.total": 15,
+            "llm.token_count.prompt": 10,
+            "llm.token_count.completion": 5,
+            "llm.finish_reason": "tool_calls",
+            "openinference.span.kind": "LLM"
+          },
+          "events": [],
+          "links": [],
+          "resource": {
+            "attributes": {},
+            "schema_url": ""
+          }
+        }
+      ]
+    }
+  ],
+  "final_validation": {
+    "collected": 20,
+    "exitstatus": 0,
+    "executed": [
+      {
+        "nodeid": "tests/test_instrumentor.py::test_tool_calls_respect_trace_controls[suppress]",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "tests/test_instrumentor.py::test_tool_calls_respect_trace_controls[context]",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "tests/test_instrumentor.py::test_tool_calls_respect_trace_controls[masking]",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "tests/test_instrumentor.py::test_chat_completion",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "tests/test_instrumentor.py::test_prompt_template",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "tests/test_instrumentor.py::test_async_chat_completion",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "tests/test_instrumentor.py::test_async_prompt_template",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "tests/test_instrumentor.py::test_finish_reason_values[stop]",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "tests/test_instrumentor.py::test_finish_reason_values[length]",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "tests/test_instrumentor.py::test_finish_reason_values[tool_calls]",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "tests/test_instrumentor.py::test_finish_reason_values[content_filter]",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "tests/test_instrumentor.py::test_uninstrument_restores_all_wrapped_methods",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "tests/test_instrumentor.py::test_chat_completion_with_multimodal_input",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "tests/test_instrumentor.py::test_chat_completion_with_input_audio",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "tests/test_instrumentor.py::test_message_content_as_tuple",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "tests/test_instrumentor.py::test_chat_completion_with_generator_content",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "tests/test_instrumentor.py::test_chat_completion_with_failing_generator_content",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "tests/test_instrumentor.py::test_chat_completion_records_tool_calls_on_output_message",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "tests/test_instrumentor.py::test_async_chat_completion_records_tool_calls_on_output_message",
+        "outcome": "passed"
+      },
+      {
+        "nodeid": "tests/test_instrumentor.py::test_async_chat_completion_with_failing_generator_content",
+        "outcome": "passed"
+      }
+    ],
+    "working_tree_test_addition": "Existing test module only: one parameterized suppress/context/masking case."
+  }
+}
