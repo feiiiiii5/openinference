@@ -107,7 +107,14 @@ def _set_model_name_attributes(
     else:
         vendor = ""
         if model_id and isinstance(model_id, str):
-            (vendor, *_) = model_id.split(".")
+            vendor = next(
+                (
+                    segment
+                    for segment in model_id.split(".")
+                    if segment in {"amazon", "ai21", "anthropic", "cohere", "meta"}
+                ),
+                "",
+            )
         if vendor == "amazon":
             # Titan format: {results: [{outputText: "..."}]}
             results = response_body.get("results", [])
